@@ -2,6 +2,7 @@
 
 export interface Wallpaper {
     _id: string,
+    category_id: string,
     created_at: number,
     width: number,
     height: number,
@@ -18,4 +19,23 @@ export interface WallpaperCategory {
     title: string,
     cover_photo: string,
     blur_hash: string
+}
+
+export interface CollectionRawData{
+    title: string,
+    cover_photo: string,
+    blur_hash: string,
+    sub_collection: Array<SubCollection>
+}
+
+export interface SubCollection{
+    id: string,
+    count: number
+}
+
+
+export interface ProcessStack{
+    photoIndex: number,
+    categoriesName: Array<string>,
+    collections: Array<CollectionRawData>
 }

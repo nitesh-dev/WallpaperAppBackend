@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 const wallpaperSchema = new Schema({
 
     _id: { type: String, required: true },
+    category_id: { type: String, required: true },
     created_at: { type: Number, required: true },
     width: { type: Number, required: true },
     height: { type: Number, required: true },

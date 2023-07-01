@@ -55,6 +55,7 @@ const progressQuery: ProcessStack = await loadFile()
 app.get('/', async (req, res, next) => {
   if (progressQuery == null) {
     res.send('Server internal error')
+    
   } else {
     next()
   }

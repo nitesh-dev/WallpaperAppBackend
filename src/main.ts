@@ -214,9 +214,9 @@ async function startFetchAndUpload() {
     progressQuery.photoIndex += data.count
     await saveFile(progressQuery)
 
-    // wait for 30 seconds code here
+    // wait for 90 seconds
     console.log("Delaying...")
-    await delay(10)
+    await delay(90)
 
   }
 }

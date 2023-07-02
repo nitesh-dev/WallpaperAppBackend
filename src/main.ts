@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
-import { createApi } from 'unsplash-js';
+import { OrderBy, createApi } from 'unsplash-js';
 import * as nodeFetch from 'node-fetch';
 import { CollectionRawData, ProcessStack, WallpaperData } from './DataType';
 import { loadFile, saveFile } from './FileHandling.js';
@@ -72,7 +72,6 @@ app.use((req, res, next) => {
 
 
 
-
 // --------------------- Testing Request -----------------------------
 
 app.get('/', (req, res) => {
@@ -114,6 +113,17 @@ app.get('/collections/photos/:id', async (req, res) => {
 })
 
 
+
+app.get('/latest', async (req, res) => {
+
+  let collections = await unsplash.collections.list({})
+
+  if (collections.response != undefined) {
+    res.json(collections)
+  } else {
+    res.send('Not found')
+  }
+})
 
 
 

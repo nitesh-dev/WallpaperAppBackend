@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { WallpaperData } from "./DataType";
-import { Wallpaper } from "./Model.js";
+import { CollectionRawData, WallpaperData } from "./DataType";
+import { Wallpaper, WallpaperCategory } from "./Model.js";
 
 export default class MongoAPI {
 
@@ -36,6 +36,18 @@ export default class MongoAPI {
             const result = await Wallpaper.bulkWrite(bulkOps);
 
             console.log("Wallpapers added to MongoDB:", result);
+            return true;
+        } catch (error) {
+            console.log("Error adding wallpapers to MongoDB:", error);
+            return false;
+        }
+    }
+
+    async createCollection(data: CollectionRawData){
+        try {
+            
+            const result = await WallpaperCategory.create(data)
+            console.log("Collection added to MongoDB:", result);
             return true;
         } catch (error) {
             console.log("Error adding wallpapers to MongoDB:", error);

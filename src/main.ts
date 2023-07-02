@@ -4,16 +4,18 @@ import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
 import { createApi } from 'unsplash-js';
 import * as nodeFetch from 'node-fetch';
-import { CollectionRawData, ProcessStack, Wallpaper } from './DataType';
+import { CollectionRawData, ProcessStack, WallpaperData } from './DataType';
 import { loadFile, saveFile } from './FileHandling.js';
 import { Collections } from 'unsplash-js/dist/methods/search/types/response';
 import { delay } from './Utils.js';
+import MongoAPI from './Mongo.js'
 
 
 
 
 dotenv.config()
 
+const atlas = process.env.ATLAS_URI || '';
 const port = process.env.EXPRESS_PORT || 3001
 const unsplashApiKey = process.env.UNSPLASH_API_KEY || ''
 
@@ -22,7 +24,11 @@ app.use(cors())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
+const mongoApi = new MongoAPI()
+let isMongoConnected = await mongoApi.connectMongoose(atlas)
 
+
+// connecting to unsplash
 const unsplash = createApi({
   accessKey: unsplashApiKey,
   fetch: nodeFetch.default as unknown as typeof fetch,
@@ -51,16 +57,13 @@ const progressQuery: ProcessStack = await loadFile()
 
 // --------------------- middleware ---------------------------
 
-app.get('/', async (req, res, next) => {
-  if (progressQuery == null) {
-    res.send('Server internal error')
-
+app.use((req, res, next) => {
+  if (!isMongoConnected) {
+    res.status(503).send("Database connection error")
   } else {
     next()
   }
 })
-
-
 
 
 
@@ -177,10 +180,8 @@ app.get('/stop', async (req, res) => {
 
 async function startFetchAndUpload() {
 
-  let data = await fetchNextPhotos()
-
   // do until all collection not over
-  while (data.wallpapers.length != 0) {
+  while (true) {
 
     // break the loop if not allowed
     if (isStarting == false) {
@@ -188,8 +189,28 @@ async function startFetchAndUpload() {
       return
     }
 
-    // add to database code here...
+
+    // fetching next wallpaper data
+    let data = await fetchNextPhotos()
     console.log("fetched data: " + data.count + "  Result: " + data.wallpapers.length + "    page: " + data.page)
+
+    // close the loop if collection is empty
+    if (data.count == 0) {
+      console.log('Collection over')
+      return
+    }
+
+    // saving to mongo
+    console.log("Sending to mongo...")
+    const status = await mongoApi.addWallpapers(data.wallpapers)
+
+    // close the loop if error occurs
+    if(status == false){
+      console.log("Fetching stopped due to error")
+      return
+    }
+
+
     progressQuery.photoIndex += data.count
     await saveFile(progressQuery)
 
@@ -197,8 +218,6 @@ async function startFetchAndUpload() {
     console.log("Delaying...")
     await delay(10)
 
-    // fetch again
-    data = await fetchNextPhotos()
   }
 }
 
@@ -207,7 +226,7 @@ async function startFetchAndUpload() {
 async function fetchNextPhotos() {
 
   const currentFetchCollection = findCurrentFetchingCollection(progressQuery.photoIndex)
-  let photoCollection = Array<Wallpaper>()
+  let photoCollection = Array<WallpaperData>()
 
   if (currentFetchCollection == null) {
     console.log('collection over')
@@ -229,10 +248,10 @@ async function fetchNextPhotos() {
 
       let image_url = data.urls.raw.split('?')[0]
 
-      const wallpaper: Wallpaper = {
+      const wallpaper: WallpaperData = {
         _id: data.id,
         category_id: currentFetchCollection.collectionId,
-        created_at: data.created_at,
+        created_at: new Date(data.created_at).getTime(),
         width: data.width,
         height: data.height,
         color: data.color,
@@ -284,7 +303,7 @@ function findCurrentFetchingCollection(currentPos: number) {
 
         // calculating fetch count
         let fetchCount = sub.count - relPhotoIndex
-        if(fetchCount > 30) fetchCount = 30
+        if (fetchCount > 30) fetchCount = 30
 
         data.page = page
         data.count = fetchCount

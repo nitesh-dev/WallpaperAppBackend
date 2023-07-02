@@ -1,6 +1,6 @@
 
 
-export interface Wallpaper {
+export interface WallpaperData {
     _id: string,
     category_id: string,
     created_at: number,
@@ -10,11 +10,11 @@ export interface Wallpaper {
     blur_hash: string,
     description: string,
     image_url: string,
-    likes: string,
+    likes: number,
     is_premium: boolean
 }
 
-export interface WallpaperCategory {
+export interface WallpaperCategoryData {
     _id: string,
     title: string,
     cover_photo: string,

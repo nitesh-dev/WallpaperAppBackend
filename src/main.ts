@@ -7,6 +7,7 @@ import * as nodeFetch from 'node-fetch';
 import { CollectionRawData, ProcessStack, Wallpaper } from './DataType';
 import { loadFile, saveFile } from './FileHandling.js';
 import { Collections } from 'unsplash-js/dist/methods/search/types/response';
+import { delay } from './Utils.js';
 
 
 
@@ -53,7 +54,7 @@ const progressQuery: ProcessStack = await loadFile()
 app.get('/', async (req, res, next) => {
   if (progressQuery == null) {
     res.send('Server internal error')
-    
+
   } else {
     next()
   }
@@ -79,7 +80,7 @@ app.get('/collections/:name', async (req, res) => {
 
   let collections = await unsplash.search.getCollections({
     query: req.params.name,
-    page: 1,
+    page: 2,
     perPage: 15
   })
 
@@ -144,21 +145,77 @@ app.get('/photos', async (req, res) => {
 
 
 
+let isStarting = false;
+
+app.get('/start', async (req, res) => {
+  console.log("fetching start request")
+
+  if (isStarting == false) {
+    isStarting = true
+    startFetchAndUpload()
+    res.send("Started")
+  } else {
+    res.send("Already started")
+  }
+
+})
+
+app.get('/stop', async (req, res) => {
+  console.log("stop request sended")
+
+  isStarting = false
+  res.send("Stopping")
+})
+
+
+
 
 
 
 
 // ---------------------------------------------------
 
+async function startFetchAndUpload() {
+
+  let data = await fetchNextPhotos()
+
+  // do until all collection not over
+  while (data.wallpapers.length != 0) {
+
+    // break the loop if not allowed
+    if (isStarting == false) {
+      console.log("Fetching stopped successfully")
+      return
+    }
+
+    // add to database code here...
+    console.log("fetched data: " + data.count + "  Result: " + data.wallpapers.length + "    page: " + data.page)
+    progressQuery.photoIndex += data.count
+    await saveFile(progressQuery)
+
+    // wait for 30 seconds code here
+    console.log("Delaying...")
+    await delay(10)
+
+    // fetch again
+    data = await fetchNextPhotos()
+  }
+}
+
 
 // return true when photo fetch available otherwise false
 async function fetchNextPhotos() {
 
   const currentFetchCollection = findCurrentFetchingCollection(progressQuery.photoIndex)
+  let photoCollection = Array<Wallpaper>()
 
   if (currentFetchCollection == null) {
     console.log('collection over')
-    return false
+    return {
+      wallpapers: photoCollection,
+      count: 0,
+      page: 0
+    }
   }
 
   let photos = await unsplash.collections.getPhotos({
@@ -167,21 +224,14 @@ async function fetchNextPhotos() {
     perPage: currentFetchCollection.count
   })
 
-  // let pho = await unsplash.photos.get({
-  //   photoId: 'Oiye57IAyvI'
-  // })
-
-
-  let photoCollection = Array<Wallpaper>()
-
   if (photos.response != undefined) {
     photos.response!!.results.forEach(data => {
 
       let image_url = data.urls.raw.split('?')[0]
-      
+
       const wallpaper: Wallpaper = {
         _id: data.id,
-        category_id: '',
+        category_id: currentFetchCollection.collectionId,
         created_at: data.created_at,
         width: data.width,
         height: data.height,
@@ -193,14 +243,18 @@ async function fetchNextPhotos() {
         is_premium: false
       }
 
-      if(image_url != undefined){
+      if (image_url != undefined) {
         photoCollection.push(wallpaper)
       }
     });
   }
 
 
-  return photoCollection
+  return {
+    wallpapers: photoCollection,
+    count: currentFetchCollection.count,
+    page: currentFetchCollection.page
+  }
 }
 
 function findCurrentFetchingCollection(currentPos: number) {
@@ -224,11 +278,13 @@ function findCurrentFetchingCollection(currentPos: number) {
         // photo index relative to sub collection
         let relPhotoIndex = (currentPos - (totalCount - sub.count))
 
+        console.log("RelPhotoIndex: " + relPhotoIndex)
         // find page number
-        let page = Math.floor(relPhotoIndex / 30)
+        let page = Math.floor(relPhotoIndex / 30) + 1
 
         // calculating fetch count
-        let fetchCount = Math.min(relPhotoIndex + 30, sub.count)
+        let fetchCount = sub.count - relPhotoIndex
+        if(fetchCount > 30) fetchCount = 30
 
         data.page = page
         data.count = fetchCount

@@ -50,7 +50,7 @@ const unsplash = createApi({
 
 
 
-
+const premiumPerPage = 3
 const maxPhotoCount = 5000
 const progressQuery: ProcessStack = await loadFile()
 
@@ -205,7 +205,7 @@ async function startFetchAndUpload() {
     const status = await mongoApi.addWallpapers(data.wallpapers)
 
     // close the loop if error occurs
-    if(status == false){
+    if (status == false) {
       console.log("Fetching stopped due to error")
       return
     }
@@ -244,7 +244,9 @@ async function fetchNextPhotos() {
   })
 
   if (photos.response != undefined) {
+    let times = 0
     photos.response!!.results.forEach(data => {
+      times += 1
 
       let image_url = data.urls.raw.split('?')[0]
 
@@ -266,6 +268,19 @@ async function fetchNextPhotos() {
         photoCollection.push(wallpaper)
       }
     });
+
+
+    // sorting collection by most likes
+    if (photoCollection.length > 5) {
+      photoCollection.sort(function (a, b) {
+        return b.likes - a.likes;
+      })
+
+      // selecting the first 3 as premium
+      photoCollection[0].is_premium = true
+      photoCollection[1].is_premium = true
+      photoCollection[2].is_premium = true
+    }
   }
 
 

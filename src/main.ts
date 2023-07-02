@@ -6,10 +6,8 @@ import { createApi } from 'unsplash-js';
 import * as nodeFetch from 'node-fetch';
 import { CollectionRawData, ProcessStack, Wallpaper } from './DataType';
 import { loadFile, saveFile } from './FileHandling.js';
-import { ApiResponse } from 'unsplash-js/dist/helpers/response';
 import { Collections } from 'unsplash-js/dist/methods/search/types/response';
-import { photos } from 'unsplash-js/dist/internals';
-import { Full } from 'unsplash-js/dist/methods/users/types';
+
 
 
 
@@ -244,17 +242,17 @@ function findCurrentFetchingCollection(currentPos: number) {
 }
 
 
-
 function collectCategoryData(collections: Collections) {
 
   let photos = 0
   let isLimitOverflow = false
 
   const collectionData: CollectionRawData = {
+    id: '',
     title: '',
     cover_photo: '',
     blur_hash: '',
-    sub_collection: []
+    sub_collection: [],
   }
 
   for (let index = 0; index < collections.results.length; index++) {
@@ -265,6 +263,7 @@ function collectCategoryData(collections: Collections) {
 
     if (coverPhoto == undefined || blurHash == null) continue
     if (collectionData.cover_photo == "" || collectionData.blur_hash == "") {
+      collectionData.id = data.id
       collectionData.title = data.title
       collectionData.cover_photo = coverPhoto
       collectionData.blur_hash = blurHash

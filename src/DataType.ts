@@ -22,6 +22,7 @@ export interface WallpaperCategory {
 }
 
 export interface CollectionRawData{
+    id: string,
     title: string,
     cover_photo: string,
     blur_hash: string,

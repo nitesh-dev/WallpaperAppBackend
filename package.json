@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "dev": "node out/main.js"
+    "dev": "nodemon out/main.js --ignore *.json"
   },
   "type": "module",
   "author": "",

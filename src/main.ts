@@ -16,25 +16,88 @@ import MongoAPI from './Mongo.js'
 dotenv.config()
 
 const atlas = process.env.ATLAS_URI || '';
-const port = process.env.EXPRESS_PORT || 3001
-const unsplashApiKey = process.env.UNSPLASH_API_KEY || ''
+const port = process.env.EXPRESS_PORT || 3001;
+const unsplashApiKey1 = process.env.UNSPLASH_API_KEY1 || '';
+const unsplashApiKey2 = process.env.UNSPLASH_API_KEY2 || '';
+const unsplashApiKey3 = process.env.UNSPLASH_API_KEY3 || '';
+const unsplashApiKey4 = process.env.UNSPLASH_API_KEY4 || '';
+const unsplashApiKey5 = process.env.UNSPLASH_API_KEY5 || '';
+const unsplashApiKey6 = process.env.UNSPLASH_API_KEY6 || '';
 
 const app = express()
 app.use(cors())
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 const mongoApi = new MongoAPI()
 let isMongoConnected = await mongoApi.connectMongoose(atlas)
 
 
 // connecting to unsplash
-const unsplash = createApi({
-  accessKey: unsplashApiKey,
+let unsplash = createApi({
+  accessKey: unsplashApiKey1,
   fetch: nodeFetch.default as unknown as typeof fetch,
 });
 
 
+const apiChangePerCount = 45
+let currentCount = 0
+function changeUnsplashApi() {
+
+  currentCount += 1
+
+  if (currentCount > 270) currentCount = 1
+  console.log("Request no: " + currentCount)
+
+  if (currentCount <= apiChangePerCount) {
+    if (currentCount == 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey1,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+
+  } else if (currentCount <= apiChangePerCount * 2) {
+    if (currentCount == apiChangePerCount + 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey2,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+
+  } else if (currentCount <= apiChangePerCount * 3) {
+    if (currentCount == apiChangePerCount * 2 + 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey3,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+
+  } else if (currentCount <= apiChangePerCount * 4) {
+    if (currentCount == apiChangePerCount * 3 + 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey4,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+
+  } else if (currentCount <= apiChangePerCount * 5) {
+    if (currentCount == apiChangePerCount * 4 + 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey5,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+
+  } else if (currentCount <= apiChangePerCount * 6) {
+    if (currentCount == apiChangePerCount * 5 + 1) {
+      unsplash = createApi({
+        accessKey: unsplashApiKey6,
+        fetch: nodeFetch.default as unknown as typeof fetch,
+      });
+    }
+  }
+}
 
 // ------------------------ temp data --------------------
 // only called on project setup
@@ -164,11 +227,11 @@ let isOver = false;
 app.get('/start', async (req, res) => {
   console.log("fetching start request")
 
-  if(isOver == true){
+  if (isOver == true) {
     res.send("Collection Over")
     return
   }
-  
+
   if (isStarting == false) {
     isStarting = true
     startFetchAndUpload()
@@ -208,6 +271,8 @@ async function startFetchAndUpload() {
 
 
       // fetching next wallpaper data
+      changeUnsplashApi()
+
       let data = await fetchNextPhotos()
       console.log("fetched data: " + data.count + "  Result: " + data.wallpapers.length + "    page: " + data.page)
 
@@ -228,7 +293,7 @@ async function startFetchAndUpload() {
         // making title first letter capital
         let title = progressQuery.categoriesName[data.index].toLowerCase()
         title = title.charAt(0).toUpperCase() + title.slice(1)
-        
+
 
         let categoryRawData = progressQuery.collections[data.index]
 
@@ -259,9 +324,9 @@ async function startFetchAndUpload() {
       progressQuery.photoIndex += data.count
       await saveFile(progressQuery)
 
-      // wait for 90 seconds
+      // wait for 14 seconds
       console.log("Delaying...")
-      await delay(90)
+      await delay(14)
 
     }
   } catch (error) {

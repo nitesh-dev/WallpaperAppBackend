@@ -16,14 +16,6 @@ export async function saveFile(data: ProcessStack) {
 export async function submitReport(data: string) {
     const options = { timeZone: 'Asia/Kolkata' };
     const date = new Date()
-    const text =
-        `${data}
-        
-        ${date.toLocaleDateString('en-IN', options)} | ${date.toLocaleTimeString('en-IN', options)}
-
-
-
-
-    `
-    await promises.writeFile('./src/temp/report.txt', data)
+    const text = `${data} \n ----------------- ${date.toLocaleDateString('en-IN', options)} | ${date.toLocaleTimeString('en-IN', options)}----------------- \n\n\n\n`
+    await promises.appendFile('./src/temp/report.txt', text)
 }

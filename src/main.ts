@@ -4,8 +4,8 @@ import dotenv from 'dotenv'
 import bodyParser from 'body-parser'
 import { OrderBy, createApi } from 'unsplash-js';
 import * as nodeFetch from 'node-fetch';
-import { CollectionRawData, ProcessStack, WallpaperData } from './DataType';
-import { loadFile, saveFile } from './FileHandling.js';
+import { CollectionRawData, ProcessStack, WallpaperCategoryData, WallpaperData } from './DataType';
+import { loadFile, saveFile, submitReport } from './FileHandling.js';
 import { Collections } from 'unsplash-js/dist/methods/search/types/response';
 import { delay } from './Utils.js';
 import MongoAPI from './Mongo.js'
@@ -159,10 +159,16 @@ app.get('/photos', async (req, res) => {
 
 
 let isStarting = false;
+let isOver = false;
 
 app.get('/start', async (req, res) => {
   console.log("fetching start request")
 
+  if(isOver == true){
+    res.send("Collection Over")
+    return
+  }
+  
   if (isStarting == false) {
     isStarting = true
     startFetchAndUpload()
@@ -190,44 +196,77 @@ app.get('/stop', async (req, res) => {
 
 async function startFetchAndUpload() {
 
-  // do until all collection not over
-  while (true) {
+  try {
+    // do until all collection not over
+    while (true) {
 
-    // break the loop if not allowed
-    if (isStarting == false) {
-      console.log("Fetching stopped successfully")
-      return
+      // break the loop if not allowed
+      if (isStarting == false) {
+        console.log("Fetching stopped successfully")
+        return
+      }
+
+
+      // fetching next wallpaper data
+      let data = await fetchNextPhotos()
+      console.log("fetched data: " + data.count + "  Result: " + data.wallpapers.length + "    page: " + data.page)
+
+      // close the loop if collection is empty
+      if (data.count == 0) {
+        console.log('Collection over')
+        isOver = true
+        isStarting = false
+        return
+      }
+
+      // saving to mongo
+      console.log("Sending to mongo...")
+
+      // create collection if it is first page of collection
+      if (data.page == 1 && data.index != -1) {
+
+        // making title first letter capital
+        let title = progressQuery.categoriesName[data.index].toLowerCase()
+        title = title.charAt(0).toUpperCase() + title.slice(1)
+        
+
+        let categoryRawData = progressQuery.collections[data.index]
+
+        let category: WallpaperCategoryData = {
+          _id: categoryRawData.id,
+          title: title,
+          cover_photo: categoryRawData.cover_photo,
+          blur_hash: categoryRawData.blur_hash
+        }
+
+        if (await mongoApi.createCollection(category) == false) {
+
+          console.log("Fetching stopped due to error")
+          isStarting = false
+          return
+        }
+      }
+
+      // add wallpapers to server and close the loop if error occurs
+      if (await mongoApi.addWallpapers(data.wallpapers) == false) {
+
+        console.log("Fetching stopped due to error")
+        isStarting = false
+        return
+      }
+
+
+      progressQuery.photoIndex += data.count
+      await saveFile(progressQuery)
+
+      // wait for 90 seconds
+      console.log("Delaying...")
+      await delay(90)
+
     }
-
-
-    // fetching next wallpaper data
-    let data = await fetchNextPhotos()
-    console.log("fetched data: " + data.count + "  Result: " + data.wallpapers.length + "    page: " + data.page)
-
-    // close the loop if collection is empty
-    if (data.count == 0) {
-      console.log('Collection over')
-      return
-    }
-
-    // saving to mongo
-    console.log("Sending to mongo...")
-    const status = await mongoApi.addWallpapers(data.wallpapers)
-
-    // close the loop if error occurs
-    if (status == false) {
-      console.log("Fetching stopped due to error")
-      return
-    }
-
-
-    progressQuery.photoIndex += data.count
-    await saveFile(progressQuery)
-
-    // wait for 90 seconds
-    console.log("Delaying...")
-    await delay(90)
-
+  } catch (error) {
+    isStarting = false
+    submitReport(error + "")
   }
 }
 
@@ -243,7 +282,8 @@ async function fetchNextPhotos() {
     return {
       wallpapers: photoCollection,
       count: 0,
-      page: 0
+      page: 0,
+      index: -1
     }
   }
 
@@ -297,7 +337,8 @@ async function fetchNextPhotos() {
   return {
     wallpapers: photoCollection,
     count: currentFetchCollection.count,
-    page: currentFetchCollection.page
+    page: currentFetchCollection.page,
+    index: currentFetchCollection.index
   }
 }
 
@@ -306,13 +347,17 @@ function findCurrentFetchingCollection(currentPos: number) {
     name: '',
     collectionId: '',
     page: 0,
-    count: 0
+    count: 0,
+    index: -1
   }
 
   let totalCount = 0
-  for (const collection of progressQuery.collections) {
+  let index = -1;
 
+  for (const collection of progressQuery.collections) {
+    index += 1
     data.name = collection.title
+
     for (const sub of collection.sub_collection) {
       totalCount += sub.count
 
@@ -330,6 +375,7 @@ function findCurrentFetchingCollection(currentPos: number) {
         let fetchCount = sub.count - relPhotoIndex
         if (fetchCount > 30) fetchCount = 30
 
+        data.index = index
         data.page = page
         data.count = fetchCount
 

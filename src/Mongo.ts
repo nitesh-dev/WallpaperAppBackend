@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { CollectionRawData, WallpaperData } from "./DataType";
+import { WallpaperCategoryData, WallpaperData } from "./DataType";
 import { Wallpaper, WallpaperCategory } from "./Model.js";
-
+import { submitReport } from './FileHandling.js';
 export default class MongoAPI {
 
     async connectMongoose(url: string) {
@@ -38,19 +38,27 @@ export default class MongoAPI {
             console.log("Wallpapers added to MongoDB:", result);
             return true;
         } catch (error) {
-            console.log("Error adding wallpapers to MongoDB:", error);
+
+            await submitReport(error + "")
             return false;
         }
     }
 
-    async createCollection(data: CollectionRawData){
+    async createCollection(data: WallpaperCategoryData){
+
         try {
+            const update = data;
+            const options = {
+                upsert: true
+            };
+    
+            const result = await WallpaperCategory.findByIdAndUpdate(data._id, update, options)
+            console.log("Document added to MongoDB:", result);
             
-            const result = await WallpaperCategory.create(data)
-            console.log("Collection added to MongoDB:", result);
             return true;
         } catch (error) {
-            console.log("Error adding wallpapers to MongoDB:", error);
+
+            await submitReport(error + "")
             return false;
         }
     }

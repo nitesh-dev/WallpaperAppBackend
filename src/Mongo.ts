@@ -52,7 +52,7 @@ export default class MongoAPI {
                 upsert: true
             };
     
-            const result = await WallpaperCategory.findByIdAndUpdate(data._id, update, options)
+            const result = await WallpaperCategory.findOneAndUpdate({_id: data._id}, update, options);
             console.log("Document added to MongoDB:", result);
             
             return true;

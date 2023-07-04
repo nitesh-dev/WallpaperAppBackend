@@ -24,6 +24,9 @@ const unsplashApiKey4 = process.env.UNSPLASH_API_KEY4 || '';
 const unsplashApiKey5 = process.env.UNSPLASH_API_KEY5 || '';
 const unsplashApiKey6 = process.env.UNSPLASH_API_KEY6 || '';
 
+const isServer = process.env.IS_SERVER == 'true' || true
+
+
 const app = express()
 app.use(cors())
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -32,6 +35,9 @@ app.use(bodyParser.json());
 const mongoApi = new MongoAPI()
 let isMongoConnected = await mongoApi.connectMongoose(atlas)
 
+const premiumPerPage = 3
+const maxPhotoCount = 5000
+const progressQuery: ProcessStack = await loadFile()
 
 // connecting to unsplash
 let unsplash = createApi({
@@ -41,56 +47,56 @@ let unsplash = createApi({
 
 
 const apiChangePerCount = 45
-let currentCount = 0
+
 function changeUnsplashApi() {
 
-  currentCount += 1
+  progressQuery.apiCount += 1
 
-  if (currentCount > 270) currentCount = 1
-  console.log("Request no: " + currentCount)
+  if (progressQuery.apiCount > 270) progressQuery.apiCount = 1
+  console.log("Request no: " + progressQuery.apiCount)
 
-  if (currentCount <= apiChangePerCount) {
-    if (currentCount == 1) {
+  if (progressQuery.apiCount <= apiChangePerCount) {
+    if (progressQuery.apiCount == 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey1,
         fetch: nodeFetch.default as unknown as typeof fetch,
       });
     }
 
-  } else if (currentCount <= apiChangePerCount * 2) {
-    if (currentCount == apiChangePerCount + 1) {
+  } else if (progressQuery.apiCount <= apiChangePerCount * 2) {
+    if (progressQuery.apiCount == apiChangePerCount + 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey2,
         fetch: nodeFetch.default as unknown as typeof fetch,
       });
     }
 
-  } else if (currentCount <= apiChangePerCount * 3) {
-    if (currentCount == apiChangePerCount * 2 + 1) {
+  } else if (progressQuery.apiCount <= apiChangePerCount * 3) {
+    if (progressQuery.apiCount == apiChangePerCount * 2 + 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey3,
         fetch: nodeFetch.default as unknown as typeof fetch,
       });
     }
 
-  } else if (currentCount <= apiChangePerCount * 4) {
-    if (currentCount == apiChangePerCount * 3 + 1) {
+  } else if (progressQuery.apiCount <= apiChangePerCount * 4) {
+    if (progressQuery.apiCount == apiChangePerCount * 3 + 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey4,
         fetch: nodeFetch.default as unknown as typeof fetch,
       });
     }
 
-  } else if (currentCount <= apiChangePerCount * 5) {
-    if (currentCount == apiChangePerCount * 4 + 1) {
+  } else if (progressQuery.apiCount <= apiChangePerCount * 5) {
+    if (progressQuery.apiCount == apiChangePerCount * 4 + 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey5,
         fetch: nodeFetch.default as unknown as typeof fetch,
       });
     }
 
-  } else if (currentCount <= apiChangePerCount * 6) {
-    if (currentCount == apiChangePerCount * 5 + 1) {
+  } else if (progressQuery.apiCount <= apiChangePerCount * 6) {
+    if (progressQuery.apiCount == apiChangePerCount * 5 + 1) {
       unsplash = createApi({
         accessKey: unsplashApiKey6,
         fetch: nodeFetch.default as unknown as typeof fetch,
@@ -113,16 +119,20 @@ function changeUnsplashApi() {
 
 
 
-const premiumPerPage = 3
-const maxPhotoCount = 5000
-const progressQuery: ProcessStack = await loadFile()
-
 
 // --------------------- middleware ---------------------------
 
 app.use((req, res, next) => {
   if (!isMongoConnected) {
     res.status(503).send("Database connection error")
+  } else {
+    next()
+  }
+})
+
+app.get('/admin/*',(req, res, next) => {
+  if (isServer == true) {
+    res.status(403).send("This request is restricted on server side")
   } else {
     next()
   }
@@ -221,7 +231,7 @@ app.get('/', (req, res) => {
 
 
 // ------------------------ Server side request ----------------------
-app.get('/collections/:name', async (req, res) => {
+app.get('/admin/collections/:name', async (req, res) => {
 
   let collections = await unsplash.search.getCollections({
     query: req.params.name,
@@ -240,7 +250,7 @@ app.get('/collections/:name', async (req, res) => {
 })
 
 
-app.get('/collections/photos/:id', async (req, res) => {
+app.get('/admin/collections/photos/:id', async (req, res) => {
 
   let collections = await unsplash.collections.getPhotos({
     collectionId: req.params.id,
@@ -257,7 +267,7 @@ app.get('/collections/photos/:id', async (req, res) => {
 
 
 
-app.get('/latest', async (req, res) => {
+app.get('/admin/latest', async (req, res) => {
 
   let collections = await unsplash.collections.list({})
 
@@ -273,7 +283,7 @@ app.get('/latest', async (req, res) => {
 
 // ---------------------------------------------------------------------
 
-app.get('/add/collections/:name', async (req, res) => {
+app.get('/admin/add/collections/:name', async (req, res) => {
   let collections = await unsplash.search.getCollections({
     query: req.params.name,
     page: 1,
@@ -294,7 +304,7 @@ app.get('/add/collections/:name', async (req, res) => {
 })
 
 
-app.get('/photos', async (req, res) => {
+app.get('/admin/photos', async (req, res) => {
   let data = await fetchNextPhotos()
   res.send(data)
 })
@@ -409,9 +419,9 @@ async function startFetchAndUpload() {
       await delay(14)
 
     }
-  } catch (error) {
+  } catch (error: any) {
     isStarting = false
-    submitReport(error + "")
+    submitReport(error.toString())
   }
 }
 

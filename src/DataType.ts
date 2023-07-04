@@ -36,6 +36,7 @@ export interface SubCollection{
 
 
 export interface ProcessStack{
+    apiCount: number,
     photoIndex: number,
     categoriesName: Array<string>,
     collections: Array<CollectionRawData>

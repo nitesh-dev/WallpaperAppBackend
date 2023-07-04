@@ -37,9 +37,9 @@ export default class MongoAPI {
 
             console.log("Wallpapers added to MongoDB:", result);
             return true;
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "")
+            await submitReport(error.message + "\nby addWallpapers()")
             return false;
         }
     }
@@ -56,9 +56,9 @@ export default class MongoAPI {
             console.log("Document added to MongoDB:", result);
 
             return true;
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "")
+            await submitReport(error.message + "\nby createCollection()")
             return false;
         }
     }
@@ -74,9 +74,9 @@ export default class MongoAPI {
 
         try {
             return await WallpaperCategory.find().select('-__v') as Array<WallpaperCategoryData>;
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "\nby getCollection()")
+            await submitReport(error.message + "\nby getCollection()")
             return null;
         }
     }
@@ -85,9 +85,9 @@ export default class MongoAPI {
 
         try {
             return await Wallpaper.findById(id) as WallpaperData | null;
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "\nby findWallpaper()")
+            await submitReport(error.message + "\nby findWallpaper()")
             return null;
         }
     }
@@ -103,9 +103,9 @@ export default class MongoAPI {
                 .limit(pageSize)
                 .select('-__v') as Array<WallpaperData>;
 
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "\nby getWallpapers()")
+            await submitReport(error.message + "\nby getWallpapers()")
             return null;
         }
     }
@@ -125,9 +125,9 @@ export default class MongoAPI {
             .skip(skipCount)
             .limit(pageSize) as Array<WallpaperData>;
 
-        } catch (error) {
+        } catch (error: any) {
 
-            await submitReport(error + "\nby findWallpaper()")
+            await submitReport(error.message + "\nby findWallpaper()")
             return null;
         }
     }

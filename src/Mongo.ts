@@ -81,6 +81,17 @@ export default class MongoAPI {
         }
     }
 
+    async findWallpaper(id: string) {
+
+        try {
+            return await Wallpaper.findById(id) as WallpaperData | null;
+        } catch (error) {
+
+            await submitReport(error + "\nby findWallpaper()")
+            return null;
+        }
+    }
+
     async getWallpapers(categoryId: string, page: number) {
         try {
             const pageSize = 30;                    // Number of documents per page

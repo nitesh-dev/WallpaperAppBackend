@@ -44,17 +44,17 @@ export default class MongoAPI {
         }
     }
 
-    async createCollection(data: WallpaperCategoryData){
+    async createCollection(data: WallpaperCategoryData) {
 
         try {
             const update = data;
             const options = {
                 upsert: true
             };
-    
-            const result = await WallpaperCategory.findOneAndUpdate({_id: data._id}, update, options);
+
+            const result = await WallpaperCategory.findOneAndUpdate({ _id: data._id }, update, options);
             console.log("Document added to MongoDB:", result);
-            
+
             return true;
         } catch (error) {
 
@@ -70,13 +70,31 @@ export default class MongoAPI {
 
     /* **************************** Public Request ********************************* */
 
-    async getCollections(){
+    async getCollections() {
 
         try {
             return await WallpaperCategory.find().select('-__v') as Array<WallpaperCategoryData>;
         } catch (error) {
 
             await submitReport(error + "\nby getCollection()")
+            return null;
+        }
+    }
+
+    async getWallpapers(categoryId: string, page: number) {
+        try {
+            const pageSize = 30;                    // Number of documents per page
+            const skip = (page - 1) * pageSize;     // Calculate the number of documents to skip
+
+            return await Wallpaper.find({ category_id: categoryId })
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(pageSize)
+                .select('-__v') as Array<WallpaperData>;
+
+        } catch (error) {
+
+            await submitReport(error + "\nby getWallpapers()")
             return null;
         }
     }

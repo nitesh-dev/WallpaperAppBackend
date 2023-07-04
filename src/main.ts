@@ -136,9 +136,9 @@ app.use((req, res, next) => {
 
 app.get('/public/category', async (req, res) => {
   const result = await mongoApi.getCollections()
-  if(result == null){
+  if (result == null) {
     res.status(500).send("Server Internal Error")
-  }else{
+  } else {
     res.status(200).json(result)
   }
 })
@@ -146,9 +146,20 @@ app.get('/public/category', async (req, res) => {
 
 app.get('/public/wallpapers', async (req, res) => {
   try {
-    const result = await mongoApi.getCollections()
-    
+    const collectionId = req.query.id as string
+    const page = parseInt(req.query.page as string)
+    console.log(page)
+    if (page < 1) throw "page index must be greater than 0"
+    const result = await mongoApi.getWallpapers(collectionId, page)
+
+    if (result == null) {
+      res.status(500).send("Server Internal Error")
+    } else {
+      res.status(200).json(result)
+    }
+
   } catch (error) {
+
     console.log(error)
     res.status(400).send("Bad Request")
   }
@@ -319,7 +330,7 @@ async function startFetchAndUpload() {
       console.log("Sending to mongo...")
 
       // create collection if it is first page of collection
-      if (data.page == 1 && data.index != -1) {
+      if (data.isFirst == true) {
 
         // making title first letter capital
         let title = progressQuery.categoriesName[data.index].toLowerCase()
@@ -379,7 +390,8 @@ async function fetchNextPhotos() {
       wallpapers: photoCollection,
       count: 0,
       page: 0,
-      index: -1
+      index: -1,
+      isFirst: false,
     }
   }
 
@@ -398,7 +410,7 @@ async function fetchNextPhotos() {
 
       const wallpaper: WallpaperData = {
         _id: data.id,
-        category_id: currentFetchCollection.collectionId,
+        category_id: currentFetchCollection.categoryId,
         created_at: new Date(data.created_at).getTime(),
         width: data.width,
         height: data.height,
@@ -434,7 +446,8 @@ async function fetchNextPhotos() {
     wallpapers: photoCollection,
     count: currentFetchCollection.count,
     page: currentFetchCollection.page,
-    index: currentFetchCollection.index
+    index: currentFetchCollection.index,
+    isFirst: currentFetchCollection.isFirst
   }
 }
 
@@ -442,9 +455,11 @@ function findCurrentFetchingCollection(currentPos: number) {
   let data = {
     name: '',
     collectionId: '',
+    categoryId: '',
     page: 0,
     count: 0,
-    index: -1
+    index: -1,
+    isFirst: false
   }
 
   let totalCount = 0
@@ -453,12 +468,18 @@ function findCurrentFetchingCollection(currentPos: number) {
   for (const collection of progressQuery.collections) {
     index += 1
     data.name = collection.title
+    data.categoryId = collection.id
 
+    let loopCount = 0
     for (const sub of collection.sub_collection) {
       totalCount += sub.count
+      loopCount += 1
 
       if (currentPos < totalCount) {
         data.collectionId = sub.id
+
+        // notify that to create category, if it is first sub collection
+        if(loopCount == 1) data.isFirst = true
 
         // photo index relative to sub collection
         let relPhotoIndex = (currentPos - (totalCount - sub.count))

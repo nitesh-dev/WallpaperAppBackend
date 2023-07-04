@@ -130,6 +130,33 @@ app.use((req, res, next) => {
 
 
 
+// -------------------- Public Request -----------------------------
+
+// https://images.unsplash.com/photo-1687626835694-2b7c6a352f1b?ixid=2yJhcHBfaWQiOjEyMDd9&fm=jpg&fit=crop&w=720&h=20000&q=40
+
+app.get('/public/category', async (req, res) => {
+  const result = await mongoApi.getCollections()
+  if(result == null){
+    res.status(500).send("Server Internal Error")
+  }else{
+    res.status(200).json(result)
+  }
+})
+
+
+app.get('/public/wallpapers', async (req, res) => {
+  try {
+    const result = await mongoApi.getCollections()
+    
+  } catch (error) {
+    console.log(error)
+    res.status(400).send("Bad Request")
+  }
+})
+
+
+
+
 
 
 
@@ -141,6 +168,10 @@ app.get('/', (req, res) => {
   res.send('Server is working')
 })
 
+
+
+
+// ------------------------ Server side request ----------------------
 app.get('/collections/:name', async (req, res) => {
 
   let collections = await unsplash.search.getCollections({

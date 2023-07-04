@@ -65,6 +65,24 @@ export default class MongoAPI {
 
 
 
+
+
+
+    /* **************************** Public Request ********************************* */
+
+    async getCollections(){
+
+        try {
+            return await WallpaperCategory.find().select('-__v') as Array<WallpaperCategoryData>;
+        } catch (error) {
+
+            await submitReport(error + "\nby getCollection()")
+            return null;
+        }
+    }
+
+
+
     // ------------------ Account -------------------
 
     // async isAdmin(accountId: string) {

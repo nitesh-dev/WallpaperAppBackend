@@ -183,6 +183,26 @@ app.get('/public/wallpaper/:id', async (req, res) => {
   }
 })
 
+app.get('/public/wallpaper/search/:query/:page', async (req, res) => {
+  try {
+    const page = parseInt(req.params.page as string)
+    if (page < 1) throw "page index must be greater than 0"
+
+    const result = await mongoApi.searchWallpapers(req.params.query, page)
+
+    if (result == null) {
+      res.status(404).send("Not Found")
+    } else {
+      res.status(200).json(result)
+    }
+
+  } catch (error) {
+
+    console.log(error)
+    res.status(400).send("Bad Request")
+  }
+})
+
 
 
 

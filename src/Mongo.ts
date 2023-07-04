@@ -111,6 +111,28 @@ export default class MongoAPI {
     }
 
 
+    async searchWallpapers(query: string, page: number) {
+
+        try {
+            // code to search
+            const pageSize = 30
+            const skipCount = (page - 1) * pageSize;
+
+            return await Wallpaper.find(
+                { $text: { $search: query } }
+            ).sort({ score: { $meta: 'textScore' } })
+            .select('-__v')
+            .skip(skipCount)
+            .limit(pageSize) as Array<WallpaperData>;
+
+        } catch (error) {
+
+            await submitReport(error + "\nby findWallpaper()")
+            return null;
+        }
+    }
+
+
 
     // ------------------ Account -------------------
 

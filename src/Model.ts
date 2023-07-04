@@ -25,6 +25,7 @@ const wallpaperCategorySchema = new Schema({
     blur_hash: { type: String, required: false },
 })
 
+wallpaperSchema.index({ description: 'text' });
 export const Wallpaper = mongoose.model("Wallpaper", wallpaperSchema)
 export const WallpaperCategory = mongoose.model("WallpaperCategory", wallpaperCategorySchema)
 
